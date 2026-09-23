@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+/*
+  Tailwind v4 : la config vit dans le CSS, plus dans tailwind.config.js.
+  Chaque variable déclarée ici génère automatiquement les utilitaires
+  correspondants (--color-nano-cyan → bg-nano-cyan, text-nano-cyan, etc.)
+*/
+@theme {
+  --color-nano-void: #05070f;
+  --color-nano-base: #0a0e1e;
+  --color-nano-panel: #0d1128;
+  --color-nano-raised: #141a38;
+  --color-nano-lifted: #1d2547;
+
+  --color-nano-cyan: #00e5ff;
+  --color-nano-purple: #b14eff;
+  --color-nano-signal: #00ffa3;
+  --color-nano-warn: #ffb84d;
+  --color-nano-danger: #ff4d6d;
+
+  --color-nano-white: #f5f7ff;
+  --color-nano-muted: #8a93b8;
+  --color-nano-dim: #4a5378;
+
+  --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  background-color: var(--color-nano-void);
+  color: var(--color-nano-white);
+  font-family: var(--font-display);
+}

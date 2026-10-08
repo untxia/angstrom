@@ -79,6 +79,15 @@ export class MaterialsProjectClient {
     return this.#request('materials/summary', params);
   }
 
+  /** Fiche d'un matériau avec sa structure cristalline (réseau + sites atomiques). */
+  async getMaterial(materialId) {
+    const rows = await this.#request('materials/summary', {
+      material_ids: materialId,
+      _fields: ['material_id', 'formula_pretty', 'band_gap', 'is_stable', 'energy_above_hull', 'density', 'volume', 'nsites', 'symmetry', 'structure']
+    });
+    return Array.isArray(rows) ? (rows[0] ?? null) : (rows ?? null);
+  }
+
   async getById(materialId) {
     const results = await this.#request('materials/summary', {
       material_ids: [materialId]

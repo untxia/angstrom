@@ -155,7 +155,8 @@
             <div class="min-w-0">
               <div class="text-[14px] font-bold">{r.formula}</div>
               {#if linkable(r.material_id)}
-                <a class="text-nano-cyan hover:underline" href="https://next-gen.materialsproject.org/materials/{r.material_id}" target="_blank" rel="noreferrer">{r.material_id}</a>
+                <a class="text-nano-cyan hover:underline" href="/material/{r.material_id}">{r.material_id} · maille 3D</a>
+                <a class="ml-2 text-nano-dim hover:text-nano-white hover:underline" href="https://next-gen.materialsproject.org/materials/{r.material_id}" target="_blank" rel="noreferrer" aria-label="Voir sur Materials Project">MP ↗</a>
               {:else}<span class="text-nano-muted">{r.material_id}</span>{/if}
             </div>
             <div class="col-span-2 min-w-0 md:col-span-1">

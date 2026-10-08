@@ -21,6 +21,14 @@ Chaque recherche passe par six étapes, diffusées en temps réel (NDJSON) vers 
 
 Principe de conception : **la sortie du LLM n'est jamais une source de confiance.** Les filtres sont revalidés par le code (symboles chimiques, bornes numériques) avant tout appel, les identifiants de matériaux inventés sont écartés, et une valeur absente reste « inconnue » au lieu d'être devinée.
 
+## Fiche matériau : maille cristalline en 3D
+
+Chaque résultat de la shortlist renvoie vers `/material/mp-…` : propriétés calculées (gap, énergie au-dessus de l'enveloppe, densité, groupe d'espace…) et **structure cristalline interactive** (Three.js) : on tourne et on zoome, on passe de la cellule unitaire à une supermaille 2×2×2 ou 3×3×3, et le contour cyan montre la cellule.
+
+![Fiche matériau : maille de NaCl en 3D](docs/screenshots/fiche-materiau.png)
+
+> Capture réalisée avec une structure d'exemple (NaCl), pas avec une réponse réelle de Materials Project. La structure reçue de l'API est validée côté serveur (réseau 3×3 numérique, symboles d'éléments valides, 400 atomes maximum) avant d'être envoyée au navigateur.
+
 ## Stack
 
 | Couche | Choix |
@@ -85,6 +93,9 @@ src/lib/server/agent.js        orchestration en deux passes, événements de pro
 src/lib/server/{groq,anthropic}.js   fournisseurs LLM interchangeables
 src/lib/materialsProjectClient.js    client REST Materials Project
 src/lib/hud/                   composants de l'interface (champ canvas, panneaux, jauges)
+src/lib/components/CrystalViewer.svelte   maille cristalline 3D (Three.js)
+src/lib/server/structure.js    validation de la structure renvoyée par Materials Project
+src/routes/material/[id]/      fiche matériau
 src/routes/screening/          écran en direct + mode démo
 src/routes/{login,auth,account,logout}/   parcours de connexion
 ```
@@ -101,7 +112,7 @@ Cyan `#00E5FF` pour les actions, violet `#B14EFF` réservé au raisonnement de l
 
 ## Pistes
 
-- Fiche matériau avec maille cristalline en 3D (Three.js)
+- Liaisons interatomiques estimées dans la maille 3D
 - Historique des recherches par utilisateur (Supabase)
 - Limite de débit partagée (Redis / KV)
 - Export de la shortlist (CSV)

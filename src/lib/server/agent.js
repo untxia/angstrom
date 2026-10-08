@@ -59,7 +59,7 @@ const pick = (m) => ({
   density: m.density ?? null
 });
 
-export async function runScreening({ query, mp, llm, emit, limit = 100, shortlist = 10, poolForRanking = 30 }) {
+export async function runScreening({ query, mp, llm, emit, limit = 100, shortlist = 10, poolForRanking = 20 }) {
   const log = (verb, kind, text) => emit({ type: 'log', t: new Date().toTimeString().slice(0, 8), verb, kind, text });
 
   // 1 · analyse (Claude)
@@ -111,7 +111,7 @@ export async function runScreening({ query, mp, llm, emit, limit = 100, shortlis
     await llm.complete(
       RANK_SYSTEM,
       `Requête : <<<\n${query}\n>>>\nFiltres appliqués : ${JSON.stringify(filters)}\nCandidats :\n${JSON.stringify(pool.map(({ material_id, formula, band_gap, energy_above_hull, is_stable, density }) => ({ material_id, formula, band_gap, energy_above_hull, is_stable, density })))}\nRenvoie les ${shortlist} meilleurs au plus.`,
-      2500
+      1800
     )
   );
   const byId = new Map(pool.map((m) => [m.material_id, m]));

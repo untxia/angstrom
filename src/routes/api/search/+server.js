@@ -19,8 +19,20 @@ function limited(ip) {
   return recent.length > MAX_PER_MINUTE;
 }
 
+// Extrait un court message lisible du corps d'erreur Materials Project (jamais de clé dedans).
+function mpDetail(body) {
+  if (!body) return '';
+  try {
+    const j = JSON.parse(body);
+    const d = j?.detail ?? j?.message ?? j?.error;
+    return String(typeof d === 'string' ? d : JSON.stringify(d)).slice(0, 200);
+  } catch {
+    return String(body).slice(0, 120);
+  }
+}
+
 function friendly(err) {
-  if (err instanceof MaterialsProjectError) return err.status === 401 || err.status === 403 ? 'Clé Materials Project refusée.' : 'Materials Project ne répond pas correctement.';
+  if (err instanceof MaterialsProjectError) return err.status === 401 || err.status === 403 ? 'Clé Materials Project refusée.' : `Materials Project ne répond pas correctement (HTTP ${err.status}${mpDetail(err.body) ? ` : ${mpDetail(err.body)}` : ''}).`;
   if (err instanceof LlmError) return err.status === 401 ? 'Clé du modèle (Groq/Anthropic) refusée.' : err.status === 429 ? 'Le modèle est saturé, réessaie dans un instant.' : `Le modèle ne répond pas correctement (HTTP ${err.status}${err.detail ? ` : ${err.detail}` : ''}).`;
   if (err instanceof SyntaxError || /JSON/.test(err?.message ?? '')) return "Le modèle a renvoyé une réponse inexploitable. Réessaie.";
   return 'La recherche a échoué.';

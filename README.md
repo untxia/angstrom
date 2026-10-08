@@ -15,7 +15,7 @@ Chaque recherche passe par six étapes, diffusées en temps réel (NDJSON) vers 
 1. **Analyse** : un LLM transforme la requête en filtres JSON (éléments à inclure ou exclure, gap, stabilité…).
 2. **Requête** : appel à `materials/summary` de Materials Project avec ces filtres.
 3. **Filtre** : filtre local (énergie au-dessus de l'enveloppe, valeurs manquantes signalées).
-4. **Classement** : le LLM classe jusqu'à 30 candidats.
+4. **Classement** : le LLM classe jusqu'à 20 candidats.
 5. **Justification** : 1 à 2 phrases par matériau, fondées uniquement sur les valeurs reçues.
 6. **Export** : shortlist avec liens vers les fiches Materials Project.
 

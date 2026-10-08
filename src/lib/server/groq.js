@@ -1,10 +1,27 @@
 /** Fournisseur LLM Groq (API compatible OpenAI). Même interface que createLlm d'Anthropic : complete(system, user, maxTokens). */
 import { LlmError, errorDetail } from './anthropic.js';
 
-export function createGroqLlm({ apiKey, model = 'llama-3.3-70b-versatile', fetchImpl = fetch }) {
+/** Délai d'attente avant nouvel essai (secondes → ms), plafonné pour rester sous maxDuration. */
+export function retryDelayMs(res, attempt) {
+  const h = Number(res.headers?.get?.('retry-after'));
+  const base = Number.isFinite(h) && h > 0 ? h * 1000 : 2000 * (attempt + 1);
+  return Math.min(base, 12_000);
+}
+
+export function createGroqLlm({ apiKey, model = 'llama-3.3-70b-versatile', fetchImpl = fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), retries = 2 }) {
   return {
     async complete(system, user, maxTokens = 1200) {
-      const res = await fetchImpl('https://api.groq.com/openai/v1/chat/completions', {
+      for (let attempt = 0; ; attempt++) {
+        const res = await call(system, user, maxTokens);
+        if (res.status === 429 && attempt < retries) { await sleep(retryDelayMs(res, attempt)); continue; }
+        if (!res.ok) throw new LlmError(res.status, await errorDetail(res));
+        const json = await res.json();
+        return json.choices?.[0]?.message?.content ?? '';
+      }
+    }
+  };
+  function call(system, user, maxTokens) {
+    return fetchImpl('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
         body: JSON.stringify({
@@ -18,9 +35,5 @@ export function createGroqLlm({ apiKey, model = 'llama-3.3-70b-versatile', fetch
         }),
         signal: AbortSignal.timeout(60_000)
       });
-      if (!res.ok) throw new LlmError(res.status, await errorDetail(res));
-      const json = await res.json();
-      return json.choices?.[0]?.message?.content ?? '';
-    }
-  };
+  }
 }

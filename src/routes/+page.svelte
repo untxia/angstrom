@@ -1,14 +1,13 @@
 <script>
+  import { goto } from '$app/navigation';
   import Button3D from '$lib/components/Button3D.svelte';
 
   let query = $state('');
 
   function handleSearch(e) {
     e.preventDefault();
-    // TODO : brancher sur l'agent (client Materials Project + Claude API,
-    // orchestration en deux passes — parsing de la requête puis classement
-    // justifié des candidats)
-    console.log('Recherche :', query);
+    const q = query.trim();
+    if (q.length >= 3) goto(`/screening?q=${encodeURIComponent(q)}`);
   }
 </script>
 

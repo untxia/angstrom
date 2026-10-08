@@ -2,7 +2,8 @@
   /** values: 0..1. `semantic` colore par stabilité (vert/ambre/rose) au lieu de l'échelle cyan. `lit` = nb de colonnes déjà scannées. */
   let { label, values, semantic = false, lit = values.length } = $props();
   const color = (v, i) =>
-    i >= lit ? 'rgba(255,255,255,.06)'
+    v == null ? "rgba(255,255,255,.14)"
+    : i >= lit ? 'rgba(255,255,255,.06)'
     : semantic ? (v < 0.55 ? 'var(--color-nano-signal)' : v < 0.82 ? 'var(--color-nano-warn)' : 'var(--color-nano-danger)')
     : `rgba(0,229,255,${(0.18 + v * 0.82).toFixed(2)})`;
 </script>

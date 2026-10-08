@@ -1,13 +1,18 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from "svelte";
 
   /** families: un groupe de matériaux par amas (ex. oxydes, sulfures…). focus: index de l'amas que l'agent lit. */
   let { families, candidates, focus = 0, seed = 7 } = $props(); // candidates: { formula, status: "stable"|"meta"|"unstable", cluster }[]
 
   const COL = { stable: '#00FFA3', meta: '#FFB84D', unstable: '#FF4D6D' };
-  let host, cv;
+  let host, cv, rebuild = null;
 
   function rng(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+  $effect(() => {
+    candidates.length; families.length;
+    untrack(() => rebuild?.());
+  });
 
   onMount(() => {
     const ctx = cv.getContext("2d"), bg = document.createElement('canvas'), bctx = bg.getContext('2d');
@@ -76,6 +81,7 @@
 
     function loop(now) { const dt = Math.min(0.1, (now - last) / 1000); last = now; draw((now - t0) / 1000, dt); raf = requestAnimationFrame(loop); }
     build();
+    rebuild = build;
     if (reduce) draw(14, 1); else raf = requestAnimationFrame((n) => { t0 = last = n; loop(n); });
     const ro = new ResizeObserver(() => { build(); if (reduce) draw(14, 1); }); ro.observe(host);
     return () => { cancelAnimationFrame(raf); ro.disconnect(); };

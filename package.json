@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test src/lib/server/*.test.js"
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^3.2.0",

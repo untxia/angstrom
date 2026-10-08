@@ -34,8 +34,18 @@ npm run dev
 
 ## Prochaines étapes
 
-1. Route serveur `POST /api/search` : orchestration Claude → Materials Project
-2. Écran de résultats + fiche matériau (maille cristalline Three.js)
+1. ~~Route serveur `POST /api/search`~~ — fait (voir ci-dessous)
+2. Fiche matériau (maille cristalline Three.js) ; l'écran de résultats est `/screening`
 3. Scène de scroll Three.js/GSAP sur la page d'accueil
 4. Historique de sessions + authentification Supabase
-5. Tests
+5. Tests : `npm test` couvre l'orchestration (faux clients, sans réseau) ; reste les tests de composants
+
+## Agent (v0)
+
+`POST /api/search { query }` renvoie un flux NDJSON d'événements (`stage`, `log`, `filters`, `fetched`, `candidates`, `ranking`, `done`, `error`) que l'écran `/screening?q=…` affiche en direct.
+
+1. **Claude, passe 1** : requête → filtres JSON. Le code revalide tout (symboles chimiques, bornes numériques) avant d'appeler Materials Project.
+2. **Materials Project** : `materials/summary`, puis filtre local sur l'énergie au-dessus de l'enveloppe.
+3. **Claude, passe 2** : classe jusqu'à 30 candidats et justifie, uniquement à partir des valeurs reçues. Les `material_id` inventés sont écartés ; une valeur absente reste « inconnue ».
+
+Variables : `MP_API_KEY`, `ANTHROPIC_API_KEY`, optionnel `ANTHROPIC_MODEL` (défaut `claude-sonnet-5-5`). Limite : 8 recherches/minute/IP (en mémoire).

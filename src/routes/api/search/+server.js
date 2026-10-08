@@ -38,9 +38,9 @@ function friendly(err) {
   return 'La recherche a échoué.';
 }
 
-export async function POST({ request, getClientAddress }) {
+export async function POST({ request, getClientAddress, locals }) {
   if (!env.MP_API_KEY || !(env.GROQ_API_KEY || env.ANTHROPIC_API_KEY)) return json({ error: 'MP_API_KEY et GROQ_API_KEY (ou ANTHROPIC_API_KEY) doivent être définies.' }, { status: 503 });
-  if (limited(getClientAddress())) return json({ error: 'Trop de recherches, réessaie dans une minute.' }, { status: 429 });
+  if (limited(locals.user?.id ?? getClientAddress())) return json({ error: 'Trop de recherches, réessaie dans une minute.' }, { status: 429 });
 
   const body = await request.json().catch(() => null);
   const query = typeof body?.query === 'string' ? body.query.trim() : '';

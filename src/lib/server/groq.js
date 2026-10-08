@@ -1,5 +1,5 @@
 /** Fournisseur LLM Groq (API compatible OpenAI). Même interface que createLlm d'Anthropic : complete(system, user, maxTokens). */
-import { LlmError } from './anthropic.js';
+import { LlmError, errorDetail } from './anthropic.js';
 
 export function createGroqLlm({ apiKey, model = 'llama-3.3-70b-versatile', fetchImpl = fetch }) {
   return {
@@ -18,7 +18,7 @@ export function createGroqLlm({ apiKey, model = 'llama-3.3-70b-versatile', fetch
         }),
         signal: AbortSignal.timeout(60_000)
       });
-      if (!res.ok) throw new LlmError(res.status);
+      if (!res.ok) throw new LlmError(res.status, await errorDetail(res));
       const json = await res.json();
       return json.choices?.[0]?.message?.content ?? '';
     }

@@ -21,7 +21,7 @@ function limited(ip) {
 
 function friendly(err) {
   if (err instanceof MaterialsProjectError) return err.status === 401 || err.status === 403 ? 'Clé Materials Project refusée.' : 'Materials Project ne répond pas correctement.';
-  if (err instanceof LlmError) return err.status === 401 ? 'Clé du modèle (Groq/Anthropic) refusée.' : err.status === 429 ? 'Le modèle est saturé, réessaie dans un instant.' : 'Le modèle ne répond pas correctement.';
+  if (err instanceof LlmError) return err.status === 401 ? 'Clé du modèle (Groq/Anthropic) refusée.' : err.status === 429 ? 'Le modèle est saturé, réessaie dans un instant.' : `Le modèle ne répond pas correctement (HTTP ${err.status}${err.detail ? ` : ${err.detail}` : ''}).`;
   if (err instanceof SyntaxError || /JSON/.test(err?.message ?? '')) return "Le modèle a renvoyé une réponse inexploitable. Réessaie.";
   return 'La recherche a échoué.';
 }

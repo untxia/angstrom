@@ -64,8 +64,9 @@ export class MaterialsProjectClient {
       band_gap_min: filters.bandGapMin,
       band_gap_max: filters.bandGapMax,
       is_stable: filters.isStable,
-      num_elements: filters.numElements,
-      fields: filters.fields ?? [
+      nelements_min: filters.numElements,
+      nelements_max: filters.numElements,
+      _fields: filters.fields ?? [
         'material_id',
         'formula_pretty',
         'band_gap',

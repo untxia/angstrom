@@ -38,6 +38,6 @@
       placeholder="Ex : matériaux 2D stables, conducteurs, sans éléments toxiques…"
       class="flex-1 bg-transparent text-[15px] text-nano-white placeholder:text-nano-muted focus:outline-none"
     />
-    <Button3D tone="cyan" size="md">Rechercher</Button3D>
+    <Button3D tone="cyan" size="md" type="submit">Rechercher</Button3D>
   </form>
 </main>

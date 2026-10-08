@@ -11,6 +11,7 @@
     tone = 'cyan', // 'cyan' | 'purple' | 'ghost'
     size = 'md', // 'sm' | 'md' | 'lg'
     circle = false,
+    type = 'button', // 'button' | 'submit'
     href = null,
     disabled = false,
     onclick = () => {},
@@ -41,7 +42,7 @@
   </a>
 {:else}
   <button
-    type="button"
+    {type}
     {onclick}
     {disabled}
     class="btn-3d {toneClasses[tone]} {sizes[size]} rounded-full inline-flex items-center justify-center gap-2 font-bold select-none disabled:opacity-40 disabled:pointer-events-none"

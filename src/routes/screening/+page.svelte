@@ -7,12 +7,17 @@
 
   const q = $derived(page.url.searchParams.get('q')?.trim() ?? '');
   let draft = $state('');
+  let run = $state(0); // relance la même requête sans changer l'URL
+  let hint = $state('');
   $effect(() => { draft = q; });
 
   function submit(e) {
     e.preventDefault();
     const v = draft.trim();
-    if (v.length >= 3) goto(`/screening?q=${encodeURIComponent(v)}`);
+    if (v.length < 3) { hint = 'Écris au moins 3 caractères.'; return; }
+    hint = '';
+    if (v === q) run += 1;
+    else goto(`/screening?q=${encodeURIComponent(v)}`);
   }
 </script>
 
@@ -28,11 +33,13 @@
       placeholder="Ex : oxyde stable, gap entre 1,5 et 2,5 eV, sans cobalt ni plomb"
       class="min-w-0 flex-1 bg-transparent text-[13px] text-nano-white placeholder:text-nano-muted focus:outline-none"
     />
-    <Button3D tone="cyan" size="sm">Lancer</Button3D>
+    <Button3D tone="cyan" size="sm" type="submit">Lancer</Button3D>
   </form>
 
+  {#if hint}<p class="px-2 text-[11px] text-nano-warn">{hint}</p>{/if}
+
   {#if q}
-    {#key q}<LiveScreening {q} />{/key}
+    {#key `${q}|${run}`}<LiveScreening {q} />{/key}
   {:else}
     <DemoScreening />
     <p class="text-[10px] tracking-[0.06em] text-nano-dim">Mode démo : écris une requête ci-dessus pour lancer l'agent.</p>

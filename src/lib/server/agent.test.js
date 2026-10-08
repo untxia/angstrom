@@ -56,3 +56,22 @@ test('familles et stabilité', () => {
   assert.equal(familyIndex('LiFePO4'), 2); assert.equal(familyIndex('TiO2'), 0); assert.equal(familyIndex('MoS2'), 1); assert.equal(familyIndex('NaCl'), 3); assert.equal(familyIndex('GaN'), 4); assert.equal(familyIndex('Si'), 5);
   assert.equal(stabilityStatus({ is_stable: true }), 'stable'); assert.equal(stabilityStatus({ energy_above_hull: 0.08 }), 'meta'); assert.equal(stabilityStatus({}), 'unstable');
 });
+
+import { createGroqLlm } from './groq.js';
+import test2 from 'node:test';
+import assert2 from 'node:assert/strict';
+
+test2('createGroqLlm : appelle l’API Groq et renvoie le texte', async () => {
+  let seen;
+  const llm = createGroqLlm({
+    apiKey: 'k',
+    fetchImpl: async (url, init) => {
+      seen = { url, init };
+      return new Response(JSON.stringify({ choices: [{ message: { content: '{"ok":1}' } }] }), { status: 200 });
+    }
+  });
+  assert2.equal(await llm.complete('sys', 'usr'), '{"ok":1}');
+  assert2.match(seen.url, /api\.groq\.com\/openai\/v1\/chat\/completions/);
+  assert2.equal(seen.init.headers.authorization, 'Bearer k');
+  assert2.equal(JSON.parse(seen.init.body).messages[0].role, 'system');
+});

@@ -1,0 +1,54 @@
+import { json } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
+import { MaterialsProjectClient, MaterialsProjectError } from '$lib/materialsProjectClient.js';
+import { createLlm, LlmError } from '$lib/server/anthropic.js';
+import { runScreening } from '$lib/server/agent.js';
+
+// La recherche enchaîne deux appels Claude et un appel Materials Project : on laisse du temps à la fonction Vercel.
+export const config = { maxDuration: 60 };
+
+// Limite simple en mémoire : chaque recherche coûte deux appels Claude.
+const hits = new Map();
+const MAX_PER_MINUTE = 8;
+function limited(ip) {
+  const now = Date.now();
+  const recent = (hits.get(ip) ?? []).filter((t) => now - t < 60_000);
+  recent.push(now);
+  hits.set(ip, recent);
+  return recent.length > MAX_PER_MINUTE;
+}
+
+function friendly(err) {
+  if (err instanceof MaterialsProjectError) return err.status === 401 || err.status === 403 ? 'Clé Materials Project refusée.' : 'Materials Project ne répond pas correctement.';
+  if (err instanceof LlmError) return err.status === 401 ? 'Clé Anthropic refusée.' : 'Claude ne répond pas correctement.';
+  if (err instanceof SyntaxError || /JSON/.test(err?.message ?? '')) return "Le modèle a renvoyé une réponse inexploitable. Réessaie.";
+  return 'La recherche a échoué.';
+}
+
+export async function POST({ request, getClientAddress }) {
+  if (!env.MP_API_KEY || !env.ANTHROPIC_API_KEY) return json({ error: 'MP_API_KEY et ANTHROPIC_API_KEY doivent être définies dans .env.' }, { status: 503 });
+  if (limited(getClientAddress())) return json({ error: 'Trop de recherches, réessaie dans une minute.' }, { status: 429 });
+
+  const body = await request.json().catch(() => null);
+  const query = typeof body?.query === 'string' ? body.query.trim() : '';
+  if (query.length < 3 || query.length > 400) return json({ error: 'La requête doit faire entre 3 et 400 caractères.' }, { status: 400 });
+
+  const mp = new MaterialsProjectClient(env.MP_API_KEY);
+  const llm = createLlm({ apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL || undefined });
+  const enc = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const emit = (e) => controller.enqueue(enc.encode(JSON.stringify(e) + '\n'));
+      try {
+        await runScreening({ query, mp, llm, emit });
+      } catch (err) {
+        console.error('[api/search]', err?.name, err?.status ?? '', err?.message);
+        emit({ type: 'error', message: friendly(err) });
+      } finally {
+        controller.close();
+      }
+    }
+  });
+  return new Response(stream, { headers: { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store' } });
+}

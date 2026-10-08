@@ -1,0 +1,8 @@
+/* Style HUD d'Ångström : panneaux à bord fin, mono partout.
+   Couleurs = tokens nano-* de app.css.
+   cyan = actions · purple = raisonnement de l'agent (uniquement) · signal/warn/danger = stabilité du matériau. */
+@layer components {
+  .hud-panel { @apply flex min-w-0 flex-col border border-white/10 bg-nano-base px-3 pb-3 pt-2.5 font-mono text-[11px] leading-[1.45] text-nano-white tabular-nums; }
+  .hud-ph { @apply mb-2.5 flex justify-between gap-2 text-[10px] uppercase tracking-[0.1em]; }
+  .hud-tab { @apply whitespace-nowrap rounded-[2px] bg-nano-panel px-2 py-[7px] text-center text-[11px] text-nano-dim transition-colors duration-200; }
+}

@@ -84,3 +84,16 @@ test('completeJson réessaie une fois sur réponse inexploitable', async () => {
 test('completeJson abandonne après un second échec', async () => {
   await assert.rejects(completeJson({ complete: async () => 'rien' }, 's', 'u', 10));
 });
+
+test('completeJson retente sans mode JSON après un 400 « Failed to validate JSON »', async () => {
+  const seen = [];
+  const llm = {
+    complete: async (_s, _u, _m, opts) => {
+      seen.push(opts?.json);
+      if (seen.length === 1) throw Object.assign(new Error('x'), { status: 400, detail: 'Failed to validate JSON' });
+      return 'ok {"a":2}';
+    }
+  };
+  assert.deepEqual(await completeJson(llm, 's', 'u', 10), { a: 2 });
+  assert.deepEqual(seen, [undefined, false]);
+});

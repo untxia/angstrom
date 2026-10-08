@@ -10,9 +10,9 @@ export function retryDelayMs(res, attempt) {
 
 export function createGroqLlm({ apiKey, model = 'llama-3.3-70b-versatile', fetchImpl = fetch, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), retries = 2 }) {
   return {
-    async complete(system, user, maxTokens = 1200) {
+    async complete(system, user, maxTokens = 1200, { json: strict = true } = {}) {
       for (let attempt = 0; ; attempt++) {
-        const res = await call(system, user, maxTokens);
+        const res = await call(system, user, maxTokens, strict);
         if (res.status === 429 && attempt < retries) { await sleep(retryDelayMs(res, attempt)); continue; }
         if (!res.ok) throw new LlmError(res.status, await errorDetail(res));
         const json = await res.json();
@@ -20,7 +20,7 @@ export function createGroqLlm({ apiKey, model = 'llama-3.3-70b-versatile', fetch
       }
     }
   };
-  function call(system, user, maxTokens) {
+  function call(system, user, maxTokens, strict) {
     return fetchImpl('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
@@ -28,7 +28,7 @@ export function createGroqLlm({ apiKey, model = 'llama-3.3-70b-versatile', fetch
           model,
           max_tokens: maxTokens,
           temperature: 0.2,
-          response_format: { type: 'json_object' },
+          ...(strict ? { response_format: { type: 'json_object' } } : {}),
           messages: [
             { role: 'system', content: system },
             { role: 'user', content: user }

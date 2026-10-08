@@ -37,3 +37,10 @@ test('demande le mode JSON à Groq', async () => {
   await llm.complete('s', 'u');
   assert.deepEqual(body.response_format, { type: 'json_object' });
 });
+
+test('json:false retire le mode JSON', async () => {
+  let body;
+  const llm = createGroqLlm({ apiKey: 'k', fetchImpl: async (_u, init) => ((body = JSON.parse(init.body)), ok()) });
+  await llm.complete('s', 'u', 100, { json: false });
+  assert.equal(body.response_format, undefined);
+});

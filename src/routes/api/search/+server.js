@@ -4,6 +4,9 @@ import { MaterialsProjectClient, MaterialsProjectError } from '$lib/materialsPro
 import { createLlm, LlmError } from '$lib/server/anthropic.js';
 import { runScreening } from '$lib/server/agent.js';
 
+// La recherche enchaîne deux appels Claude et un appel Materials Project : on laisse du temps à la fonction Vercel.
+export const config = { maxDuration: 60 };
+
 // Limite simple en mémoire : chaque recherche coûte deux appels Claude.
 const hits = new Map();
 const MAX_PER_MINUTE = 8;

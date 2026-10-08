@@ -33,6 +33,16 @@ export function extractJson(text) {
   return JSON.parse(text.slice(s, e + 1));
 }
 
+/** Appelle le LLM et parse le JSON ; un seul nouvel essai si la réponse est inexploitable. */
+export async function completeJson(llm, system, user, maxTokens) {
+  try {
+    return extractJson(await llm.complete(system, user, maxTokens));
+  } catch (err) {
+    if (!(err instanceof SyntaxError) && !/JSON/.test(err?.message ?? '')) throw err;
+    return extractJson(await llm.complete(system, user, maxTokens));
+  }
+}
+
 const num = (v, min, max) => (typeof v === 'number' && Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : null);
 const symbols = (a) => (Array.isArray(a) ? [...new Set(a.filter((x) => typeof x === 'string' && ELEMENT.test(x)))].slice(0, 12) : []);
 
@@ -65,7 +75,7 @@ export async function runScreening({ query, mp, llm, emit, limit = 100, shortlis
   // 1 · analyse (Claude)
   emit({ type: 'stage', index: 0 });
   log('analyse', 'ai', query.slice(0, 60));
-  const filters = sanitizeFilters(extractJson(await llm.complete(PARSE_SYSTEM, `<<<\n${query}\n>>>`, 600)));
+  const filters = sanitizeFilters(await completeJson(llm, PARSE_SYSTEM, `<<<\n${query}\n>>>`, 600));
   emit({ type: 'filters', filters });
 
   // 2 · requête (Materials Project)
@@ -107,12 +117,11 @@ export async function runScreening({ query, mp, llm, emit, limit = 100, shortlis
   emit({ type: 'stage', index: 3 });
   const pool = kept.slice(0, poolForRanking);
   log('classement', 'ai', `${pool.length} candidats`);
-  const raw = extractJson(
-    await llm.complete(
+  const raw = await completeJson(
+      llm,
       RANK_SYSTEM,
       `Requête : <<<\n${query}\n>>>\nFiltres appliqués : ${JSON.stringify(filters)}\nCandidats :\n${JSON.stringify(pool.map(({ material_id, formula, band_gap, energy_above_hull, is_stable, density }) => ({ material_id, formula, band_gap, energy_above_hull, is_stable, density })))}\nRenvoie les ${shortlist} meilleurs au plus.`,
       1800
-    )
   );
   const byId = new Map(pool.map((m) => [m.material_id, m]));
   const seen = new Set();

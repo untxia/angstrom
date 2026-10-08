@@ -1,51 +1,111 @@
 # Ångström
 
-Agent IA de recherche de nanomatériaux en langage naturel. Plutôt que d'interroger Materials Project avec une syntaxe API brute, on décrit ce qu'on cherche en langage courant et l'agent traduit, interroge, croise et justifie les résultats.
+**Agent IA de screening de nanomatériaux en langage naturel.** On décrit ce qu'on cherche (« oxyde stable, gap entre 1,5 et 2,5 eV, sans cobalt »), l'agent traduit la demande en filtres, interroge la base [Materials Project](https://materialsproject.org), croise les résultats et justifie une shortlist, le tout visible en direct dans une interface de type HUD.
 
-> **Statut** : socle initial — nom, identité de marque, thème Tailwind v4, système de boutons flottants, client Materials Project et page d'accueil fonctionnelle. L'orchestration IA (Claude + Materials Project) et les écrans de résultats restent à câbler.
-> Projet perso — exploration curiosité, pas de contrainte de delivery. Licence MIT.
+![Accueil](docs/screenshots/accueil.png)
+
+![Écran de screening : l'agent parcourt un nuage de matériaux, six panneaux de télémétrie](docs/screenshots/screening.png)
+
+> Capture du mode démo : les données affichées sont des **exemples**, pas un vrai appel à Materials Project. Une recherche réelle remplit les mêmes panneaux avec les résultats de l'agent.
+
+## Comment ça marche
+
+Chaque recherche passe par six étapes, diffusées en temps réel (NDJSON) vers l'écran `/screening` :
+
+1. **Analyse** : un LLM transforme la requête en filtres JSON (éléments à inclure ou exclure, gap, stabilité…).
+2. **Requête** : appel à `materials/summary` de Materials Project avec ces filtres.
+3. **Filtre** : filtre local (énergie au-dessus de l'enveloppe, valeurs manquantes signalées).
+4. **Classement** : le LLM classe jusqu'à 30 candidats.
+5. **Justification** : 1 à 2 phrases par matériau, fondées uniquement sur les valeurs reçues.
+6. **Export** : shortlist avec liens vers les fiches Materials Project.
+
+Principe de conception : **la sortie du LLM n'est jamais une source de confiance.** Les filtres sont revalidés par le code (symboles chimiques, bornes numériques) avant tout appel, les identifiants de matériaux inventés sont écartés, et une valeur absente reste « inconnue » au lieu d'être devinée.
 
 ## Stack
 
-- **Frontend** : SvelteKit (Svelte 5, runes), Tailwind CSS v4
-- **3D / scroll** *(à réintégrer)* : Three.js + GSAP ScrollTrigger — zoom de l'échelle humaine à l'échelle atomique
-- **IA** : Claude API, orchestration en deux passes (parsing de requête → classement justifié)
-- **Données** : Materials Project API (HTTP direct, sans client Python)
-- **Stockage** : Supabase
+| Couche | Choix |
+| --- | --- |
+| Frontend | SvelteKit 2, Svelte 5 (runes), Tailwind CSS v4 |
+| Rendu | Canvas 2D (nuage de points animé), `prefers-reduced-motion` respecté |
+| IA | Groq (`llama-3.3-70b-versatile` par défaut) ou Claude, au choix, via HTTP direct |
+| Données | Materials Project REST API (HTTP direct, sans client Python) |
+| Auth | Supabase Auth (email + mot de passe, sur invitation) |
+| Hébergement | Vercel (`@sveltejs/adapter-vercel`, Node 24) |
 
-## Identité de marque
+## Sécurité
 
-- Logo : lettre A stylisée en triangle, orbite/noyau au sommet (référence au Å et à l'atome)
-- Palette : cyan `#00E5FF` (actions), violet `#B14EFF` (raisonnement de l'agent — réservé exclusivement à ça), fond `#05070F`
-- 5 niveaux de surface (élévation), boutons flottants à 4 couches (voir `Button3D.svelte`)
+- Les clés (`MP_API_KEY`, `GROQ_API_KEY`, `ANTHROPIC_API_KEY`) ne sont lues que côté serveur, jamais exposées au navigateur.
+- `/screening` et `/api/*` exigent un compte connecté. La session est validée auprès de Supabase à chaque requête (cookie `httpOnly`).
+- Comptes **sur invitation uniquement** : l'inscription libre est désactivée côté Supabase.
+- Limite de 8 recherches par minute et par utilisateur.
+- Redirections après connexion restreintes aux chemins internes (pas de redirection ouverte).
+- Messages de connexion identiques pour « email inconnu » et « mauvais mot de passe ».
 
 ## Installation
 
 ```bash
 npm install
-cp .env.example .env
-# renseigner MP_API_KEY, PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, GROQ_API_KEY (ou ANTHROPIC_API_KEY)
+cp .env.example .env     # puis renseigner les variables ci-dessous
 npm run dev
+npm test                 # tests sans réseau (faux clients)
 ```
+
+| Variable | Rôle |
+| --- | --- |
+| `MP_API_KEY` | Clé Materials Project (gratuite sur le [tableau de bord](https://next-gen.materialsproject.org/api)) |
+| `GROQ_API_KEY` | Clé Groq, prioritaire si définie. Optionnel : `GROQ_MODEL` |
+| `ANTHROPIC_API_KEY` | Alternative à Groq. Optionnel : `ANTHROPIC_MODEL` |
+| `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY` | Projet Supabase (clé publique « anon » / « publishable ») |
+| `AUTH_DISABLED` | `true` pour désactiver la connexion **en développement local uniquement** |
+
+## Authentification (Supabase)
+
+Dans le tableau de bord Supabase :
+
+1. **Authentication → Sign In / Providers** : désactiver *Allow new users to sign up*.
+2. **Authentication → URL Configuration** : *Site URL* = l'URL de production ; ajouter `http://localhost:5173/**` pour le développement.
+3. **Authentication → Email Templates** : les liens doivent pointer vers l'application.
+   - *Invite user* : `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite`
+   - *Reset password* : `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery`
+4. **Authentication → Users → Invite user** : l'invité reçoit un email, choisit son mot de passe sur `/account/password`, puis arrive sur `/screening`.
+
+![Page de connexion](docs/screenshots/connexion.png)
+
+## Déploiement sur Vercel
+
+- Importer le dépôt, ajouter les variables d'environnement ci-dessus (Production et Preview), puis redéployer.
+- `package.json` fixe `engines.node` à `24.x` (Vercel n'accepte plus Node 20) et utilise `@sveltejs/adapter-vercel` ≥ 6.3.
+- La route `/api/search` déclare `maxDuration: 60` : une recherche enchaîne deux appels LLM et un appel Materials Project.
+
+## Structure
+
+```
+src/hooks.server.js            session Supabase + protection des routes
+src/lib/server/agent.js        orchestration en deux passes, événements de progression
+src/lib/server/{groq,anthropic}.js   fournisseurs LLM interchangeables
+src/lib/materialsProjectClient.js    client REST Materials Project
+src/lib/hud/                   composants de l'interface (champ canvas, panneaux, jauges)
+src/routes/screening/          écran en direct + mode démo
+src/routes/{login,auth,account,logout}/   parcours de connexion
+```
+
+## Identité visuelle
+
+Cyan `#00E5FF` pour les actions, violet `#B14EFF` réservé au raisonnement de l'agent, vert / ambre / rouge pour la stabilité des matériaux (stable / métastable / instable), fond `#05070F`. Police : JetBrains Mono.
+
+## Limites connues
+
+- La limite de débit est en mémoire : sur Vercel (fonctions serverless), elle n'est pas partagée entre instances.
+- Les modèles Groq suivent parfois moins bien le format JSON que Claude : une réponse inexploitable déclenche un message d'erreur, il suffit de relancer.
+- Materials Project ne renvoie que les propriétés calculées disponibles : certains matériaux ont un gap ou une densité « inconnus ».
+
+## Pistes
+
+- Fiche matériau avec maille cristalline en 3D (Three.js)
+- Historique des recherches par utilisateur (Supabase)
+- Limite de débit partagée (Redis / KV)
+- Export de la shortlist (CSV)
 
 ## Source de données
 
-[Materials Project](https://materialsproject.org/dashboard) — compte + clé API gratuite, ~150 000 matériaux avec propriétés calculées.
-
-## Prochaines étapes
-
-1. ~~Route serveur `POST /api/search`~~ — fait (voir ci-dessous)
-2. Fiche matériau (maille cristalline Three.js) ; l'écran de résultats est `/screening`
-3. Scène de scroll Three.js/GSAP sur la page d'accueil
-4. Historique de sessions + authentification Supabase
-5. Tests : `npm test` couvre l'orchestration (faux clients, sans réseau) ; reste les tests de composants
-
-## Agent (v0)
-
-`POST /api/search { query }` renvoie un flux NDJSON d'événements (`stage`, `log`, `filters`, `fetched`, `candidates`, `ranking`, `done`, `error`) que l'écran `/screening?q=…` affiche en direct.
-
-1. **Claude, passe 1** : requête → filtres JSON. Le code revalide tout (symboles chimiques, bornes numériques) avant d'appeler Materials Project.
-2. **Materials Project** : `materials/summary`, puis filtre local sur l'énergie au-dessus de l'enveloppe.
-3. **Claude, passe 2** : classe jusqu'à 30 candidats et justifie, uniquement à partir des valeurs reçues. Les `material_id` inventés sont écartés ; une valeur absente reste « inconnue ».
-
-Variables : `MP_API_KEY` + `GROQ_API_KEY` (optionnel `GROQ_MODEL`, défaut `llama-3.3-70b-versatile`) ou `ANTHROPIC_API_KEY` (optionnel `ANTHROPIC_MODEL`). Groq est utilisé en priorité s’il est défini. Limite : 8 recherches/minute/IP (en mémoire).
+[Materials Project](https://materialsproject.org) : environ 150 000 matériaux avec propriétés calculées. Licence du code : MIT.

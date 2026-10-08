@@ -2,12 +2,13 @@ import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { MaterialsProjectClient, MaterialsProjectError } from '$lib/materialsProjectClient.js';
 import { createLlm, LlmError } from '$lib/server/anthropic.js';
+import { createGroqLlm } from '$lib/server/groq.js';
 import { runScreening } from '$lib/server/agent.js';
 
-// La recherche enchaîne deux appels Claude et un appel Materials Project : on laisse du temps à la fonction Vercel.
+// La recherche enchaîne deux appels au modèle et un appel Materials Project : on laisse du temps à la fonction Vercel.
 export const config = { maxDuration: 60 };
 
-// Limite simple en mémoire : chaque recherche coûte deux appels Claude.
+// Limite simple en mémoire : chaque recherche coûte deux appels au modèle.
 const hits = new Map();
 const MAX_PER_MINUTE = 8;
 function limited(ip) {
@@ -20,13 +21,13 @@ function limited(ip) {
 
 function friendly(err) {
   if (err instanceof MaterialsProjectError) return err.status === 401 || err.status === 403 ? 'Clé Materials Project refusée.' : 'Materials Project ne répond pas correctement.';
-  if (err instanceof LlmError) return err.status === 401 ? 'Clé Anthropic refusée.' : 'Claude ne répond pas correctement.';
+  if (err instanceof LlmError) return err.status === 401 ? 'Clé du modèle (Groq/Anthropic) refusée.' : err.status === 429 ? 'Le modèle est saturé, réessaie dans un instant.' : 'Le modèle ne répond pas correctement.';
   if (err instanceof SyntaxError || /JSON/.test(err?.message ?? '')) return "Le modèle a renvoyé une réponse inexploitable. Réessaie.";
   return 'La recherche a échoué.';
 }
 
 export async function POST({ request, getClientAddress }) {
-  if (!env.MP_API_KEY || !env.ANTHROPIC_API_KEY) return json({ error: 'MP_API_KEY et ANTHROPIC_API_KEY doivent être définies dans .env.' }, { status: 503 });
+  if (!env.MP_API_KEY || !(env.GROQ_API_KEY || env.ANTHROPIC_API_KEY)) return json({ error: 'MP_API_KEY et GROQ_API_KEY (ou ANTHROPIC_API_KEY) doivent être définies.' }, { status: 503 });
   if (limited(getClientAddress())) return json({ error: 'Trop de recherches, réessaie dans une minute.' }, { status: 429 });
 
   const body = await request.json().catch(() => null);
@@ -34,7 +35,10 @@ export async function POST({ request, getClientAddress }) {
   if (query.length < 3 || query.length > 400) return json({ error: 'La requête doit faire entre 3 et 400 caractères.' }, { status: 400 });
 
   const mp = new MaterialsProjectClient(env.MP_API_KEY);
-  const llm = createLlm({ apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL || undefined });
+  // Groq est prioritaire s'il est configuré ; sinon on retombe sur Anthropic.
+  const llm = env.GROQ_API_KEY
+    ? createGroqLlm({ apiKey: env.GROQ_API_KEY, model: env.GROQ_MODEL || undefined })
+    : createLlm({ apiKey: env.ANTHROPIC_API_KEY, model: env.ANTHROPIC_MODEL || undefined });
   const enc = new TextEncoder();
 
   const stream = new ReadableStream({

@@ -24,7 +24,7 @@ Agent IA de recherche de nanomatériaux en langage naturel. Plutôt que d'interr
 ```bash
 npm install
 cp .env.example .env
-# renseigner MP_API_KEY, PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, ANTHROPIC_API_KEY
+# renseigner MP_API_KEY, PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, GROQ_API_KEY (ou ANTHROPIC_API_KEY)
 npm run dev
 ```
 
@@ -48,4 +48,4 @@ npm run dev
 2. **Materials Project** : `materials/summary`, puis filtre local sur l'énergie au-dessus de l'enveloppe.
 3. **Claude, passe 2** : classe jusqu'à 30 candidats et justifie, uniquement à partir des valeurs reçues. Les `material_id` inventés sont écartés ; une valeur absente reste « inconnue ».
 
-Variables : `MP_API_KEY`, `ANTHROPIC_API_KEY`, optionnel `ANTHROPIC_MODEL` (défaut `claude-sonnet-5-5`). Limite : 8 recherches/minute/IP (en mémoire).
+Variables : `MP_API_KEY` + `GROQ_API_KEY` (optionnel `GROQ_MODEL`, défaut `llama-3.3-70b-versatile`) ou `ANTHROPIC_API_KEY` (optionnel `ANTHROPIC_MODEL`). Groq est utilisé en priorité s’il est défini. Limite : 8 recherches/minute/IP (en mémoire).

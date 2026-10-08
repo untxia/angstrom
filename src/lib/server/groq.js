@@ -28,6 +28,7 @@ export function createGroqLlm({ apiKey, model = 'llama-3.3-70b-versatile', fetch
           model,
           max_tokens: maxTokens,
           temperature: 0.2,
+          response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: system },
             { role: 'user', content: user }

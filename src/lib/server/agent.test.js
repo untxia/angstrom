@@ -75,3 +75,12 @@ test2('createGroqLlm : appelle l’API Groq et renvoie le texte', async () => {
   assert2.equal(seen.init.headers.authorization, 'Bearer k');
   assert2.equal(JSON.parse(seen.init.body).messages[0].role, 'system');
 });
+
+import { completeJson } from './agent.js';
+test('completeJson réessaie une fois sur réponse inexploitable', async () => {
+  const answers = ['désolé, pas de JSON', '{"ok":1}'];
+  assert.deepEqual(await completeJson({ complete: async () => answers.shift() }, 's', 'u', 10), { ok: 1 });
+});
+test('completeJson abandonne après un second échec', async () => {
+  await assert.rejects(completeJson({ complete: async () => 'rien' }, 's', 'u', 10));
+});

@@ -30,3 +30,10 @@ test('une erreur autre que 429 ne déclenche pas de nouvel essai', async () => {
 test('délai plafonné', () => {
   assert.equal(retryDelayMs(limited('60'), 0), 12000);
 });
+
+test('demande le mode JSON à Groq', async () => {
+  let body;
+  const llm = createGroqLlm({ apiKey: 'k', fetchImpl: async (_u, init) => ((body = JSON.parse(init.body)), ok()) });
+  await llm.complete('s', 'u');
+  assert.deepEqual(body.response_format, { type: 'json_object' });
+});

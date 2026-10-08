@@ -97,7 +97,7 @@
       filters.numElements && `${filters.numElements} éléments`
     ].filter(Boolean)
   );
-  const linkable = (id) => /^[a-z]+-\d+$/i.test(id);
+  const linkable = (id) => /^[a-z]+-[a-z0-9]+$/i.test(id);
 </script>
 
 <div class="grid gap-2.5">

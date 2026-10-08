@@ -5,7 +5,7 @@ import { parseStructure } from '$lib/server/structure.js';
 
 export const config = { maxDuration: 30 };
 
-const ID = /^[a-z]+-\d+$/i;
+const ID = /^[a-z]+-[a-z0-9]+$/i;
 
 export async function load({ params }) {
   if (!ID.test(params.id)) error(404, 'Matériau introuvable.');

@@ -12,6 +12,7 @@ test('safeNext : refuse les redirections externes', () => {
 test('isProtected : agent protégé, accueil et login publics', () => {
   assert.ok(isProtected('/screening'));
   assert.ok(isProtected('/api/search'));
+  assert.ok(isProtected('/material/mp-149'));
   assert.ok(!isProtected('/'));
   assert.ok(!isProtected('/login'));
   assert.ok(!isProtected('/auth/confirm'));

@@ -7,7 +7,7 @@ export function safeNext(next, fallback = '/screening') {
 
 /** L'agent (écran et API) est réservé aux comptes connectés ; l'accueil et /login restent publics. */
 export function isProtected(pathname) {
-  return pathname === '/screening' || pathname.startsWith('/screening/') || pathname.startsWith('/api/');
+  return pathname === '/screening' || pathname.startsWith('/screening/') || pathname.startsWith('/material/') || pathname.startsWith('/api/');
 }
 
 export function isApi(pathname) {
